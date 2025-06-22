@@ -1,6 +1,6 @@
 [package]
 name = "port-mapping"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 license = "MIT"
 authors = ["share121 <2854631158@qq.com>"]
