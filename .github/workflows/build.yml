@@ -22,10 +22,6 @@ jobs:
           - windows-64bit
           - windows-32bit
         include:
-          - build: linux-arm32
-            os: ubuntu-22.04-arm
-            target: armv7-unknown-linux-musleabi
-            archive-name: port-mapping-linux-arm32
           - build: linux-arm64
             os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-musl
@@ -65,8 +61,8 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install dependencies (linux 32bit and linux arm32 only)
-        if: matrix.build == 'linux-32bit' || matrix.build == 'linux-arm32'
+      - name: Install dependencies (linux 32bit only)
+        if: matrix.build == 'linux-32bit'
         run: |
           sudo apt update
           sudo apt install gcc-multilib
