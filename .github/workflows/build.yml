@@ -50,10 +50,6 @@ jobs:
             os: windows-2019
             target: i686-pc-windows-msvc
             archive-name: port-mapping-windows-32bit
-          - build: windows-arm64
-            os: windows-11-arm
-            target: aarch64-pc-windows-msvc
-            archive-name: port-mapping-windows-arm64
       fail-fast: false
 
     steps:
