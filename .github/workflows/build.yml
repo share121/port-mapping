@@ -65,8 +65,8 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install dependencies (linux 32bit only)
-        if: matrix.build == 'linux-32bit'
+      - name: Install dependencies (linux 32bit and linux arm32 only)
+        if: matrix.build == 'linux-32bit' || matrix.build == 'linux-arm32'
         run: |
           sudo apt update
           sudo apt install gcc-multilib
