@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::RangeInclusive};
+use std::{collections::HashMap, fmt::Display, ops::RangeInclusive};
 use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 
 #[derive(Debug)]
@@ -20,6 +20,19 @@ pub struct MappingRuleRaw<'a> {
     pub listen_port: RangeInclusive<u16>,
     pub upstream_host: &'a str,
     pub upstream_port: RangeInclusive<u16>,
+}
+
+#[derive(Debug)]
+pub struct MappingRule {
+    pub protocol: Protocol,
+    pub listen: String,
+    pub upstream: String,
+}
+
+impl Display for MappingRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}->{}", self.listen, self.upstream)
+    }
 }
 
 #[derive(Debug)]
@@ -122,17 +135,10 @@ impl<'a> MappingRuleRaw<'a> {
     }
 }
 
-#[derive(Debug)]
-pub struct MappingRule {
-    pub protocol: Protocol,
-    pub listen: String,
-    pub upstream: String,
-}
-
 pub async fn read_mapping_file<T: Unpin + AsyncRead>(
     mut reader: BufReader<T>,
-) -> Result<Vec<MappingRule>, std::io::Error> {
-    let mut rules: HashMap<(Protocol, u16), (String, u16)> = HashMap::new();
+) -> std::io::Result<Vec<MappingRule>> {
+    let mut rules = HashMap::new();
     let mut line = String::new();
     while reader.read_line(&mut line).await? != 0 {
         line = line.trim().to_string();

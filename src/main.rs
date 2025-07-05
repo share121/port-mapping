@@ -12,33 +12,32 @@ fn get_udp_buffer_sizes() -> std::io::Result<usize> {
     Ok(socket.recv_buffer_size()?)
 }
 
-async fn get_mapping_file() -> Result<BufReader<File>, std::io::Error> {
+async fn get_mapping_file() -> std::io::Result<BufReader<File>> {
     let file = File::open("mapping.txt").await;
-    Ok(match file {
-        Ok(file) => BufReader::new(file),
+    Ok(BufReader::new(match file {
+        Ok(file) => file,
         Err(_) => {
             let exe_path = std::env::current_exe()?;
             let dir = exe_path.parent().unwrap();
             let mapping_path = dir.join("mapping.txt");
-            let file = File::open(&mapping_path).await?;
-            BufReader::new(file)
+            File::open(&mapping_path).await?
         }
-    })
+    }))
 }
 
 #[tokio::main]
-async fn main() -> Result<(), std::io::Error> {
+async fn main() -> std::io::Result<()> {
+    let udp_buffer_size = get_udp_buffer_sizes()?;
     let reader = get_mapping_file().await?;
     let rules = read_mapping_file(reader).await?;
     let mut handles = vec![];
-    let udp_buffer_size = get_udp_buffer_sizes()?;
     for rule in rules {
         match rule.protocol {
             Protocol::Tcp => {
                 handles.push(tokio::spawn(async move {
                     let proxy = Arc::new(TcpProxy::new(rule.listen.clone(), rule.upstream.clone()));
                     if let Err(e) = proxy.run().await {
-                        eprintln!("[warning][tcp] {} failed: {e}", rule.listen);
+                        eprintln!("[warning][tcp][{rule}] Failed: {e}");
                     }
                 }));
             }
@@ -50,7 +49,7 @@ async fn main() -> Result<(), std::io::Error> {
                         udp_buffer_size,
                     ));
                     if let Err(e) = proxy.run().await {
-                        eprintln!("[warning][tcp] {} failed: {e}", rule.listen);
+                        eprintln!("[warning][tcp][{rule}] Failed: {e}");
                     }
                 }));
             }
