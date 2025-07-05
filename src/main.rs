@@ -1,29 +1,10 @@
 use port_mapping::{
+    get_mapping_file, get_udp_buffer_sizes,
     mapping_rule::{Protocol, read_mapping_file},
     tcp_proxy::TcpProxy,
     udp_proxy::UdpProxy,
 };
-use socket2::{Domain, Socket, Type};
 use std::sync::Arc;
-use tokio::{fs::File, io::BufReader};
-
-fn get_udp_buffer_sizes() -> std::io::Result<usize> {
-    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None)?;
-    Ok(socket.recv_buffer_size()?)
-}
-
-async fn get_mapping_file() -> std::io::Result<BufReader<File>> {
-    let file = File::open("mapping.txt").await;
-    Ok(BufReader::new(match file {
-        Ok(file) => file,
-        Err(_) => {
-            let exe_path = std::env::current_exe()?;
-            let dir = exe_path.parent().unwrap();
-            let mapping_path = dir.join("mapping.txt");
-            File::open(&mapping_path).await?
-        }
-    }))
-}
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
