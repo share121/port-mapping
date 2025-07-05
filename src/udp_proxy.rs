@@ -39,10 +39,19 @@ impl UdpProxy {
             buf.set_len(self.buffer_size);
         }
         loop {
-            let (len, addr) = server.recv_from(&mut buf).await?;
+            let (len, addr) = match server.recv_from(&mut buf).await {
+                Ok(res) => res,
+                Err(e) => {
+                    eprintln!("[warning][udp][{self}] Failed to recv from downstream: {e}");
+                    continue;
+                }
+            };
             match map.read().await.get(&addr) {
                 Some(tx) => {
-                    tx.send(buf[..len].to_vec()).await.unwrap();
+                    if let Err(e) = tx.send(buf[..len].to_vec()).await {
+                        eprintln!("[warning][udp][{self}] Tokio channel error: {e}");
+                        continue;
+                    }
                 }
                 None => {
                     let (tx, mut rx) = mpsc::channel(1);
@@ -74,18 +83,31 @@ impl UdpProxy {
                             select! {
                                 Some(received) = rx.recv() => {
                                     let client_clone = client.clone();
+                                    let self_clone = self_clone.clone();
                                     tokio::spawn(async move {
-                                        client_clone.send(&received).await.unwrap();
+                                        if let Err(e) = client_clone.send(&received).await {
+                                            eprintln!(
+                                                "[warning][udp][{self_clone}] Failed to send to upstream: {e}"
+                                            );
+                                        }
                                     });
                                 }
                                 Ok(len) = client.recv(&mut buf) => {
+                                    let self_clone = self_clone.clone();
                                     let server_clone = server_clone.clone();
                                     let data = buf[..len].to_vec();
                                     tokio::spawn(async move {
-                                        server_clone.send_to(&data, &addr).await.unwrap();
+                                        if let Err(e) = server_clone.send_to(&data, &addr).await {
+                                            eprintln!(
+                                                "[warning][udp][{self_clone}] Failed to send to downstream: {e}"
+                                            );
+                                        }
                                     });
                                 }
                                 _ = tokio::time::sleep(Duration::from_secs(60)) => {
+                                    println!(
+                                        "[info][udp][{self_clone}] No data transport for 60 seconds, closing connection"
+                                    );
                                     break;
                                 }
                             }
