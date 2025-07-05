@@ -143,7 +143,7 @@ pub async fn read_mapping_file<T: Unpin + AsyncRead>(
                         let upstream_port_from = entry.upstream_port.start();
                         for (i, port) in entry.listen_port.enumerate() {
                             if rules.contains_key(&(Protocol::Tcp, port)) {
-                                eprintln!("Tcp mapping: port {port} will be overwritten")
+                                eprintln!("[warning][tcp] Port {port} will be overwritten")
                             }
                             rules.insert(
                                 (Protocol::Tcp, port),
@@ -158,7 +158,7 @@ pub async fn read_mapping_file<T: Unpin + AsyncRead>(
                         let upstream_port_from = entry.upstream_port.start();
                         for (i, port) in entry.listen_port.enumerate() {
                             if rules.contains_key(&(Protocol::Udp, port)) {
-                                eprintln!("Udp mapping: port {port} will be overwritten")
+                                eprintln!("[warning][udp] Port {port} will be overwritten")
                             }
                             rules.insert(
                                 (Protocol::Udp, port),
@@ -173,7 +173,7 @@ pub async fn read_mapping_file<T: Unpin + AsyncRead>(
                         let upstream_port_from = entry.upstream_port.start();
                         for (i, port) in entry.listen_port.enumerate() {
                             if rules.contains_key(&(Protocol::Tcp, port)) {
-                                eprintln!("Tcp mapping: port {port} will be overwritten")
+                                eprintln!("[warning][tcp] Port {port} will be overwritten")
                             }
                             rules.insert(
                                 (Protocol::Tcp, port),
@@ -183,7 +183,7 @@ pub async fn read_mapping_file<T: Unpin + AsyncRead>(
                                 ),
                             );
                             if rules.contains_key(&(Protocol::Udp, port)) {
-                                eprintln!("Udp mapping: port {port} will be overwritten")
+                                eprintln!("[warning][udp] Port {port} will be overwritten")
                             }
                             rules.insert(
                                 (Protocol::Udp, port),
@@ -198,35 +198,39 @@ pub async fn read_mapping_file<T: Unpin + AsyncRead>(
             }
             Err(e) => match e {
                 MappingRuleParseError::Empty => (),
-                MappingRuleParseError::MissingListenPort => println!("Missing listen port: {line}"),
-                MappingRuleParseError::MissingUpstream => println!("Missing upstream: {line}"),
+                MappingRuleParseError::MissingListenPort => {
+                    eprintln!("[warning][parse] Missing listen port: {line}")
+                }
+                MappingRuleParseError::MissingUpstream => {
+                    eprintln!("[warning][parse] Missing upstream: {line}")
+                }
                 MappingRuleParseError::MissingUpstreamPort => {
-                    println!("Missing upstream port: {line}")
+                    eprintln!("[warning][parse] Missing upstream port: {line}")
                 }
                 MappingRuleParseError::InvalidProtocol(protocol) => {
-                    println!("Invalid protocol: {protocol} in {line}")
+                    eprintln!("[warning][parse] Invalid protocol: {protocol} in {line}")
                 }
                 MappingRuleParseError::InvalidListenPort(port) => {
-                    println!("Invalid listen port: {port} in {line}")
+                    eprintln!("[warning][parse] Invalid listen port: {port} in {line}")
                 }
                 MappingRuleParseError::InvalidListenPortRange(range) => {
-                    println!("Invalid listen port range: {range} in {line}")
+                    eprintln!("[warning][parse] Invalid listen port range: {range} in {line}")
                 }
                 MappingRuleParseError::InvalidUpstream(upstream) => {
-                    println!("Invalid upstream: {upstream} in {line}")
+                    eprintln!("[warning][parse] Invalid upstream: {upstream} in {line}")
                 }
                 MappingRuleParseError::InvalidUpstreamPort(port) => {
-                    println!("Invalid upstream port: {port} in {line}")
+                    eprintln!("[warning][parse] Invalid upstream port: {port} in {line}")
                 }
                 MappingRuleParseError::InvalidUpstreamPortRange(range) => {
-                    println!("Invalid upstream port range: {range} in {line}")
+                    eprintln!("[warning][parse] Invalid upstream port range: {range} in {line}")
                 }
                 MappingRuleParseError::UnmatchedPortRange(
                     listen_port_range,
                     upstream_port_range,
                 ) => {
-                    println!(
-                        "Unmatched port range: {}-{} -> {}-{} in {line}",
+                    eprintln!(
+                        "[warning][parse] Unmatched port range: {}-{} -> {}-{} in {line}",
                         listen_port_range.start(),
                         listen_port_range.end(),
                         upstream_port_range.start(),

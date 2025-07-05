@@ -15,7 +15,7 @@ impl TcpProxy {
     pub async fn run(self: Arc<Self>) -> Result<(), std::io::Error> {
         let listener = TcpListener::bind(&self.listen).await?;
         println!(
-            "TCP proxy listening on {} -> {}",
+            "[info][tcp] Listening on {} -> {}",
             self.listen, self.upstream
         );
         loop {
@@ -25,13 +25,22 @@ impl TcpProxy {
                 let mut upstream = match TcpStream::connect(&self_clone.upstream).await {
                     Ok(stream) => stream,
                     Err(e) => {
-                        println!("Failed to connect to upstream: {}", e);
+                        eprintln!(
+                            "[warning][tcp] {} failed to connect to {}: {e}",
+                            self_clone.listen, self_clone.upstream
+                        );
                         return;
                     }
                 };
                 match tokio::io::copy_bidirectional(&mut downstream, &mut upstream).await {
-                    Ok(_) => println!("TCP proxy connection closed"),
-                    Err(e) => println!("TCP proxy connection error: {}", e),
+                    Ok((a, b)) => println!(
+                        "[info][tcp] Connection closed: {} Send {a}B to {} and receive {b}B",
+                        self_clone.listen, self_clone.upstream
+                    ),
+                    Err(e) => eprintln!(
+                        "[warning][tcp] Connection error {}->{}: {e}",
+                        self_clone.listen, self_clone.upstream
+                    ),
                 };
             });
         }
