@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: build
@@ -13,7 +16,6 @@ jobs:
     strategy:
       matrix:
         build:
-          - linux-arm32
           - linux-arm64
           - linux-32bit
           - linux-64bit
