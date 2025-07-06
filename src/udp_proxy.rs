@@ -1,11 +1,9 @@
-use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
+use dashmap::DashMap;
+use std::{fmt::Display, sync::Arc, time::Duration};
 use tokio::{
     net::UdpSocket,
     select,
-    sync::{
-        RwLock,
-        mpsc::{self, Sender},
-    },
+    sync::mpsc::{self, Sender},
 };
 
 #[derive(Debug)]
@@ -33,7 +31,7 @@ impl UdpProxy {
     pub async fn run(self: Arc<Self>) -> std::io::Result<()> {
         let server = Arc::new(UdpSocket::bind(&self.listen).await?);
         println!("[info][udp][{self}] Listening");
-        let map: Arc<RwLock<HashMap<_, Sender<Vec<u8>>>>> = Arc::new(RwLock::new(HashMap::new()));
+        let map: Arc<DashMap<_, Sender<Vec<u8>>>> = Arc::new(DashMap::new());
         let mut buf = Vec::with_capacity(self.buffer_size);
         unsafe {
             buf.set_len(self.buffer_size);
@@ -46,7 +44,7 @@ impl UdpProxy {
                     continue;
                 }
             };
-            match map.read().await.get(&addr) {
+            match map.get(&addr) {
                 Some(tx) => {
                     if let Err(e) = tx.send(buf[..len].to_vec()).await {
                         eprintln!("[warning][udp][{self}] Tokio channel error: {e}");
@@ -54,14 +52,17 @@ impl UdpProxy {
                     }
                 }
                 None => {
-                    let (tx, mut rx) = mpsc::channel(1);
+                    let (tx, mut rx) = mpsc::channel(100);
                     let self_clone = self.clone();
                     let server_clone = server.clone();
-                    map.write().await.insert(addr, tx);
+                    if let Err(e) = tx.send(buf[..len].to_vec()).await {
+                        eprintln!("[warning][udp][{self}] Tokio channel error: {e}");
+                    }
+                    map.insert(addr, tx);
                     let map_clone = map.clone();
                     tokio::spawn(async move {
-                        let client = match UdpSocket::bind("localhost:0").await {
-                            Ok(client) => Arc::new(client),
+                        let client = match UdpSocket::bind("127.0.0.1:0").await {
+                            Ok(client) => client,
                             Err(e) => {
                                 eprintln!(
                                     "[warning][udp][{self_clone}] Failed to bind client socket: {e}"
@@ -82,27 +83,18 @@ impl UdpProxy {
                         loop {
                             select! {
                                 Some(received) = rx.recv() => {
-                                    let client_clone = client.clone();
-                                    let self_clone = self_clone.clone();
-                                    tokio::spawn(async move {
-                                        if let Err(e) = client_clone.send(&received).await {
-                                            eprintln!(
-                                                "[warning][udp][{self_clone}] Failed to send to upstream: {e}"
-                                            );
-                                        }
-                                    });
+                                    if let Err(e) = client.send(&received).await {
+                                        eprintln!(
+                                            "[warning][udp][{self_clone}] Failed to send to upstream: {e}"
+                                        );
+                                    }
                                 }
                                 Ok(len) = client.recv(&mut buf) => {
-                                    let self_clone = self_clone.clone();
-                                    let server_clone = server_clone.clone();
-                                    let data = buf[..len].to_vec();
-                                    tokio::spawn(async move {
-                                        if let Err(e) = server_clone.send_to(&data, &addr).await {
-                                            eprintln!(
-                                                "[warning][udp][{self_clone}] Failed to send to downstream: {e}"
-                                            );
-                                        }
-                                    });
+                                    if let Err(e) = server_clone.send_to(&buf[..len], &addr).await {
+                                        eprintln!(
+                                            "[warning][udp][{self_clone}] Failed to send to downstream: {e}"
+                                        );
+                                    }
                                 }
                                 _ = tokio::time::sleep(Duration::from_secs(60)) => {
                                     println!(
@@ -112,7 +104,7 @@ impl UdpProxy {
                                 }
                             }
                         }
-                        map_clone.write().await.remove(&addr);
+                        map_clone.remove(&addr);
                     });
                 }
             }
