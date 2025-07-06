@@ -37,7 +37,7 @@ jobs:
             target: x86_64-unknown-linux-musl
             archive-name: port-mapping-linux-64bit
           - build: macos-arm64
-            os: macos-13-xlarge
+            os: macos-13
             target: aarch64-apple-darwin
             archive-name: port-mapping-macos-arm64
           - build: macos-64bit
