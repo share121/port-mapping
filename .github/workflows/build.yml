@@ -37,19 +37,19 @@ jobs:
             target: x86_64-unknown-linux-musl
             archive-name: port-mapping-linux-64bit
           - build: macos-arm64
-            os: macos-14
+            os: macos-13-xlarge
             target: aarch64-apple-darwin
             archive-name: port-mapping-macos-arm64
           - build: macos-64bit
-            os: macos-14
+            os: macos-13
             target: x86_64-apple-darwin
             archive-name: port-mapping-macos-64bit
           - build: windows-64bit
-            os: windows-2019
+            os: windows-2022
             target: x86_64-pc-windows-msvc
             archive-name: port-mapping-windows-64bit
           - build: windows-32bit
-            os: windows-2019
+            os: windows-2022
             target: i686-pc-windows-msvc
             archive-name: port-mapping-windows-32bit
       fail-fast: false
